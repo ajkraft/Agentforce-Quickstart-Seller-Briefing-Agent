@@ -19,8 +19,9 @@ variables:
    # plain mutable strings; the subagent instructions below cover the
    # no-context-available case by asking the user for a record name and using
    # QueryRecords to look it up.
-   currentRecordId: mutable string = ""
+   currentRecordId: mutable object
       description: "The Salesforce record ID of the Lead, Opportunity, or Account the user is currently viewing. Populated by Lightning when supported; otherwise empty."
+      complex_data_type_name: "lightning__recordIdType"
 
    currentObjectApiName: mutable string = ""
       description: "The API name of the object the user is currently viewing (Lead, Opportunity, or Account). Populated by Lightning when supported; otherwise empty."
