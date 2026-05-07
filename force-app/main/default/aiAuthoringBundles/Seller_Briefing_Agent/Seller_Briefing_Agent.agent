@@ -13,11 +13,17 @@ config:
    role: "Deliver a fast, accurate background briefing on the Lead, Opportunity, or Account a seller is viewing. Surface related contacts, opportunities, recent tasks, and events so the seller can prep for an outreach, call, or meeting in under 30 seconds."
 
 variables:
+   # NOTE: Agent Script DSL doesn't currently support binding `linked` variables
+   # to Lightning page record context — only @MessagingSession, @MessagingEndUser,
+   # and @VoiceCall sources are valid (service-channel only). So these stay as
+   # plain mutable strings; the topic instructions below cover the
+   # no-context-available case by asking the user for a record name and using
+   # QueryRecords to look it up.
    currentRecordId: mutable string = ""
-      description: "The Salesforce record ID of the Lead, Opportunity, or Account the user is currently viewing."
+      description: "The Salesforce record ID of the Lead, Opportunity, or Account the user is currently viewing. Populated by Lightning when supported; otherwise empty."
 
    currentObjectApiName: mutable string = ""
-      description: "The API name of the object the user is currently viewing (Lead, Opportunity, or Account)."
+      description: "The API name of the object the user is currently viewing (Lead, Opportunity, or Account). Populated by Lightning when supported; otherwise empty."
 
 start_agent topic_selector:
    description: "Routes users to the seller background briefing topic."
@@ -48,27 +54,41 @@ topic Seller_Background_Briefing:
              (Lead, Opportunity, or Account). Skip to STEP 2.
 
            CASE B - currentRecordId IS EMPTY (Live Test Mode, Agentforce app
-           home, or any non-record-page surface):
-             You do NOT have a record on screen. Do NOT call GetRecordDetails
-             with an empty recordId — the action requires a real ID and will
-             fail. Instead:
+           home, or the agent panel was opened in a way that didn't pass
+           record context):
+             You do NOT have a usable record ID. Do NOT call GetRecordDetails
+             with an empty recordId — the action requires a real ID and the
+             call will fail. Always go through QueryRecords first.
 
-             1. Look at the user's most recent message for a record name
-                (e.g. "tell me about Acme Corp", "brief me on the Smith deal",
-                "what do I know about lead Jane Doe?").
-             2. If you cannot find a specific record name in the message,
-                respond with:
-                  "I don't see a record on screen. Which Lead, Opportunity,
-                  or Account would you like a briefing on? You can give me
-                  the name, or open the record in Salesforce and ask again."
-                Then stop — do not call any actions.
-             3. If you do have a record name, call QueryRecords with a
-                natural-language input like:
+             1. Look at the user's CURRENT and PREVIOUS messages for a
+                specific record name. Examples that count as a name:
+                  - "tell me about Acme Corp"
+                  - "brief me on the Smith deal"
+                  - "what do I know about lead Jane Doe?"
+                Examples that DO NOT count as a name (just demonstratives):
+                  - "this account"
+                  - "this record"
+                  - "the opportunity I'm viewing"
+
+             2. If you found a specific record name:
+                Call QueryRecords with a natural-language input like:
                   "Find the Lead, Opportunity, or Account named <name>."
                 Take the first matching record's Id from the result and use
-                it as the target record ID for STEP 2. If QueryRecords
-                returns zero matches, tell the user you couldn't find a
-                matching record and ask them to confirm the name.
+                it as the target record ID for STEP 2.
+                If QueryRecords returns zero matches, tell the user you
+                couldn't find a matching record by that name and ask them
+                to confirm the spelling.
+
+             3. If the user used a demonstrative ("this account") or
+                otherwise didn't give a name:
+                Respond EXACTLY with this message and then stop — do not
+                call any actions:
+
+                "I don't have the record context for this page yet. To brief
+                you, please tell me the record's name (for example: 'Brief
+                me on the Acme Corp account') and I'll pull it up. You can
+                also test me from inside the Agent Builder by clicking 'Set
+                Context' and choosing a record."
 
            STEP 2 - GET PRIMARY CONTEXT
            Call GetRecordDetails with recordId equal to the target record ID

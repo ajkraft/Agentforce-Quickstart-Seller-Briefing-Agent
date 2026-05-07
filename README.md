@@ -84,21 +84,34 @@ Earlier revisions of this quickstart (commits before `c000000`) shipped pre-buil
 
 ## Test it
 
-### On a real record page (the primary use case)
+The simplest, always-works prompt is **ask by name**:
 
-1. Open any **Lead**, **Opportunity**, or **Account** record in Lightning.
-2. Click the **Agentforce panel** (the sparkle icon in the upper-right utility bar).
-3. Ask: *"Brief me on this record."*
-4. The agent reads the page's `currentRecordId` and `currentObjectApiName` (Lightning auto-populates these), calls `EmployeeCopilot__GetRecordDetails` for the primary record, pulls related context via `EmployeeCopilot__QueryRecords`, and responds with a structured brief: snapshot, recent activity, key people, related context, and a suggested next step.
+> *"Brief me on the Acme Corp account."*
+>
+> *"Tell me about lead Jane Doe."*
+>
+> *"What do I need to know about the Smith renewal opportunity?"*
+
+The agent will call `QueryRecords` to find the matching record, then `GetRecordDetails` to pull its fields and related lists, and synthesize a structured briefing.
+
+### A note on record-page context
+
+The original design intent of this quickstart was for the agent to read the on-screen record automatically when opened from a Lead, Opportunity, or Account record page in Lightning. In practice, the **Agent Script DSL (`.agent` files) used by the new Advanced Builder doesn't currently expose a Lightning page-context source binding for internal/employee agents** — the only valid `linked` variable sources today are `@MessagingSession`, `@MessagingEndUser`, and `@VoiceCall`, which are service-channel only.
+
+So even on a real record page, `currentRecordId` is not populated unless your org has additional surface configuration that the panel uses to pass context (this isn't part of what the quickstart can ship). The agent handles this case gracefully: if you say *"Brief me on this account"* (a demonstrative without a name), it will respond with a polite "I don't have the page context — please give me the record's name or use Set Context in the Agent Builder."
+
+If/when Salesforce adds a `@PageContext.recordId`-style source to the Agent Script DSL, the quickstart will be updated to use it; until then, **ask by name** is the reliable, demo-clean path.
 
 ### In the Agent Builder's Live Test Mode
 
-Live Test Mode runs without a record-page context, so `currentRecordId` is empty. The agent handles this two ways:
+Two paths:
 
-- **Recommended:** Click the **Set Context** button at the top of the test panel and choose a real Lead, Opportunity, or Account record. The agent will then behave exactly as it does on a record page.
-- **Or:** Test by name. Ask *"Brief me on the Acme Corp account"* or *"Tell me about lead Jane Doe"*. The agent will call `QueryRecords` to find the record by name, then proceed with the briefing. Without context AND without a name, the agent will respond by asking which record to brief on (instead of failing silently).
+- **Set Context:** click the **Set Context** button at the top of the test panel and choose a real record. The agent will read `currentRecordId` from the test context and behave exactly as it would if the page binding worked.
+- **Ask by name:** as above — works identically in Live Test Mode and on a real record page.
 
-If the panel doesn't appear on a record page, confirm the **Seller Briefing Agent** permission set is assigned to your user (Setup → Permission Sets → Seller Briefing Agent → Manage Assignments) and that the agent is **Active** (Setup → Agentforce Agents → Seller Briefing Agent).
+### If the agent panel doesn't appear
+
+Confirm the **Seller Briefing Agent** permission set is assigned to your user (Setup → Permission Sets → Seller Briefing Agent → Manage Assignments) and that the agent is **Active** (Setup → Agentforce Agents → Seller Briefing Agent).
 
 ---
 

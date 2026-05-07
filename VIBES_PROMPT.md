@@ -92,15 +92,15 @@ PHASE 4 - TELL ME HOW TO USE IT
 
 "All set. Your Seller Briefing Agent is installed and active.
 
-To test it (best experience):
-1. Open your Salesforce org in a browser.
-2. Navigate to any Lead, Opportunity, or Account record.
-3. Click the Agentforce panel - the sparkle icon in the upper-right utility bar.
-4. Ask: 'Brief me on this record.'
+The simplest, always-works prompt is to ASK BY NAME. Try one of these in either the Agentforce panel on a record page, or in the Agent Builder's Live Test Mode:
 
-To test inside the Agent Builder (Live Test Mode):
-- Click 'Set Context' at the top of the test panel and choose a real record, OR
-- Just ask by name: 'Brief me on the Acme Corp account' or 'Tell me about lead Jane Doe'.
+- 'Brief me on the Acme Corp account'
+- 'Tell me about lead Jane Doe'
+- 'What do I need to know about the Smith renewal opportunity?'
+
+Substitute a real record name from your org. The agent looks up the record by name with QueryRecords, then pulls its details with GetRecordDetails, and produces a structured 30-second briefing.
+
+A note: the Agent Script DSL doesn't currently expose a Lightning page-context binding for internal agents, so the agent can't auto-detect 'this record' on a record page yet. Asking by name is the reliable path. The agent handles the no-context case gracefully — it will tell you it needs a name instead of erroring out.
 
 If the panel doesn't appear on a record page, refresh the page and confirm Agentforce is enabled in your org (Setup -> Einstein Setup)."
 
