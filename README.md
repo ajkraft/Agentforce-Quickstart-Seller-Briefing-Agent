@@ -10,14 +10,20 @@ Designed as a reusable foundation that sales teams can clone and differentiate t
 
 Pick the install path that matches your comfort level. All three end at the same place: an active **Seller Briefing Agent** in your org with a permission set ready to assign.
 
-### Option 1 — Agentforce Vibes (recommended, no terminal needed)
+### Option 1 — Agentforce Vibes (recommended, zero developer experience required)
 
-If you have [Agentforce Vibes](https://www.salesforce.com/agentforce/vibes/) installed, this is the lowest-friction path.
+If you have [Agentforce Vibes](https://www.salesforce.com/agentforce/vibes/) installed, this is the lowest-friction path. Vibes will install any missing prerequisites for you (Node.js, Salesforce CLI, Homebrew on macOS), deploy the agent, and activate it.
 
-1. Open Vibes, log into your target Salesforce org, and open a new chat.
-2. Open [`VIBES_PROMPT.md`](VIBES_PROMPT.md) in this repo and copy its entire contents.
-3. Paste it into Vibes. Vibes will clone this repo, deploy the metadata, create the agent, activate it, and assign the permission set to you. Watch it work; tell it to fix anything it asks about.
-4. Skip to [Test it](#test-it) below.
+1. Open Vibes and start a new chat.
+2. In the Vibes chat panel, set **Auto-approve** to allow **Read (all), Edit (all), All Commands, MCP**. This lets Vibes install missing tools without stopping at every prompt.
+3. Open [`VIBES_PROMPT.md`](VIBES_PROMPT.md) in this repo and copy the contents of the fenced block.
+4. Paste it into Vibes. Vibes will:
+   - Detect and auto-install any missing prerequisites (Homebrew, Node.js, Salesforce CLI, Git).
+   - Pause once for you to log into your Salesforce org in a browser tab (the only step that genuinely needs you).
+   - Clone this repo, deploy the metadata, create + activate the agent, and assign the permission set.
+5. When Vibes prints "All set," skip to [Test it](#test-it) below.
+
+> If Homebrew has never been installed on your Mac, the very first install may prompt you for your Mac login password in the terminal. Type it (you won't see characters as you type — that's normal) and Vibes will continue from there.
 
 ### Option 2 — One-line CLI (`setup.sh`)
 
