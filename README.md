@@ -51,12 +51,13 @@ sf agent publish authoring-bundle \
   --api-name Seller_Briefing_Agent \
   --skip-retrieve \
   --target-org MyOrgAlias
-sf project deploy start \
-  --metadata "PermissionSet:Seller_Briefing_Agent" \
-  --target-org MyOrgAlias
 sf agent activate \
   --api-name Seller_Briefing_Agent \
   --version 1 \
+  --target-org MyOrgAlias
+./scripts/patch-page-context.sh MyOrgAlias        # REQUIRED — see below
+sf project deploy start \
+  --metadata "PermissionSet:Seller_Briefing_Agent" \
   --target-org MyOrgAlias
 sf org assign permset \
   --name Seller_Briefing_Agent \
@@ -64,6 +65,8 @@ sf org assign permset \
 ```
 
 `sf agent publish authoring-bundle` compiles `force-app/main/default/aiAuthoringBundles/Seller_Briefing_Agent/Seller_Briefing_Agent.agent` and creates the underlying Bot, BotVersion, GenAiPlannerBundle, and GenAiPlugin in your org. Because the `.agent` file declares `agent_type: "AgentforceEmployeeAgent"`, the result is an internal employee agent. We deliberately don't use `sf agent create --spec` or `sf agent generate authoring-bundle --spec` — both have a known issue where they ignore the spec's `agentType: internal` and produce a Service Agent.
+
+`scripts/patch-page-context.sh` is **required** after every publish. The Agent Script DSL emits the agent's `currentRecordId` and `currentObjectApiName` variables with `<visibility>Internal</visibility>` in the deployed BotVersion XML, which prevents the Lightning runtime from injecting the on-screen record ID. The patcher retrieves the deployed BotVersion, flips both variables to `External` with `includeInPrompt=true` (matching the shape of Salesforce's reference employee agents), and redeploys. Without it, the agent will not auto-detect the record you're viewing. See the script's header comment for details.
 
 ### Already installed a broken version?
 
@@ -84,7 +87,19 @@ Earlier revisions of this quickstart (commits before `c000000`) shipped pre-buil
 
 ## Test it
 
-The simplest, always-works prompt is **ask by name**:
+Open any **Lead, Opportunity, or Account** record in Lightning, click the Agentforce panel (sparkle icon in the upper-right utility bar), and ask:
+
+> *"Brief me on this account."*
+>
+> *"Tell me about this lead."*
+>
+> *"What do I need to know about this opportunity?"*
+
+The agent reads the record on screen automatically — the page-context patcher run during install wires `currentRecordId` and `currentObjectApiName` to the Lightning runtime — and produces a structured 30-second briefing with snapshot, recent activity, key contacts, related context, and a suggested next step.
+
+### Ask by name from anywhere
+
+The agent also works from the Agentforce app home, the Agent Builder's Live Test Mode, or any other surface where there's no record context. Just include the record's name in your message:
 
 > *"Brief me on the Acme Corp account."*
 >
@@ -92,26 +107,33 @@ The simplest, always-works prompt is **ask by name**:
 >
 > *"What do I need to know about the Smith renewal opportunity?"*
 
-The agent will call `QueryRecords` to find the matching record, then `GetRecordDetails` to pull its fields and related lists, and synthesize a structured briefing.
+The agent will call `QueryRecords` to find the matching record and synthesize the briefing from its result.
 
-### A note on record-page context
+### Adding more users
 
-The original design intent of this quickstart was for the agent to read the on-screen record automatically when opened from a Lead, Opportunity, or Account record page in Lightning. In practice, the **Agent Script DSL (`.agent` files) used by the new Advanced Builder doesn't currently expose a Lightning page-context source binding for internal/employee agents** — the only valid `linked` variable sources today are `@MessagingSession`, `@MessagingEndUser`, and `@VoiceCall`, which are service-channel only.
+Every additional user who needs to use the agent must have the **Seller Briefing Agent** permission set assigned. The install assigns it to whoever ran the install; for additional users:
 
-So even on a real record page, `currentRecordId` is not populated unless your org has additional surface configuration that the panel uses to pass context (this isn't part of what the quickstart can ship). The agent handles this case gracefully: if you say *"Brief me on this account"* (a demonstrative without a name), it will respond with a polite "I don't have the page context — please give me the record's name or use Set Context in the Agent Builder."
+```bash
+sf org assign permset --name Seller_Briefing_Agent --on-behalf-of <username> --target-org MyOrgAlias
+```
 
-If/when Salesforce adds a `@PageContext.recordId`-style source to the Agent Script DSL, the quickstart will be updated to use it; until then, **ask by name** is the reliable, demo-clean path.
-
-### In the Agent Builder's Live Test Mode
-
-Two paths:
-
-- **Set Context:** click the **Set Context** button at the top of the test panel and choose a real record. The agent will read `currentRecordId` from the test context and behave exactly as it would if the page binding worked.
-- **Ask by name:** as above — works identically in Live Test Mode and on a real record page.
+…or via Setup → Permission Sets → Seller Briefing Agent → Manage Assignments → Add Assignments.
 
 ### If the agent panel doesn't appear
 
-Confirm the **Seller Briefing Agent** permission set is assigned to your user (Setup → Permission Sets → Seller Briefing Agent → Manage Assignments) and that the agent is **Active** (Setup → Agentforce Agents → Seller Briefing Agent).
+- Confirm the **Seller Briefing Agent** permission set is assigned to your user (Setup → Permission Sets → Seller Briefing Agent → Manage Assignments).
+- Confirm the agent is **Active** (Setup → Agentforce Agents → Seller Briefing Agent).
+- Refresh the record page after assigning the permission set.
+
+### If the agent says "I don't have the record context for this page yet"
+
+The page-context patcher didn't run, or it ran against a different BotVersion than the active one. Re-run it:
+
+```bash
+./scripts/patch-page-context.sh MyOrgAlias
+```
+
+Then refresh the record page.
 
 ---
 
@@ -123,6 +145,8 @@ Agentforce-Quickstart-Seller-Briefing-Agent/
 ├── VIBES_PROMPT.md                                   Copy-paste this into Agentforce Vibes
 ├── LICENSE                                           MIT
 ├── setup.sh                                          One-line CLI install
+├── scripts/
+│   └── patch-page-context.sh                         Post-publish: wires page-context binding
 ├── sfdx-project.json
 └── force-app/main/default/
     ├── aiAuthoringBundles/Seller_Briefing_Agent/
@@ -165,10 +189,11 @@ After editing, re-publish with:
 ```bash
 sf agent validate authoring-bundle --api-name Seller_Briefing_Agent
 sf agent publish authoring-bundle --api-name Seller_Briefing_Agent --skip-retrieve
-sf agent activate --api-name Seller_Briefing_Agent --version 1
+sf agent activate --api-name Seller_Briefing_Agent --version <latest>
+./scripts/patch-page-context.sh                  # rewires the new BotVersion's page-context binding
 ```
 
-`sf agent publish` will create a new BotVersion each time. Use the latest active version.
+`sf agent publish` creates a new BotVersion each time, and that new BotVersion's `currentRecordId` / `currentObjectApiName` variables ship with `<visibility>Internal</visibility>` (the Agent Script DSL doesn't currently expose External). Without re-running the patcher, the agent will stop reading the record on screen on the new active version. Always run the patcher after publish.
 
 ---
 

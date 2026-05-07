@@ -77,30 +77,34 @@ PHASE 3 - INSTALL THE AGENT (fully autonomous)
     `sf agent publish authoring-bundle --api-name Seller_Briefing_Agent --skip-retrieve`
     This compiles the .agent script, creates the Bot/BotVersion/GenAiPlannerBundle/GenAiPlugin in my org as an INTERNAL/Employee Agentforce agent (because the .agent script declares `agent_type: "AgentforceEmployeeAgent"`), and deploys the AiAuthoringBundle metadata. It takes 30-60 seconds.
 
-13. Deploy the permission set on top:
+13. Find the latest BotVersion and activate it. First query: `sf data query --query "SELECT VersionNumber FROM BotVersion WHERE BotDefinition.DeveloperName = 'Seller_Briefing_Agent' ORDER BY VersionNumber DESC LIMIT 1"`. Take the version number from that result and run: `sf agent activate --api-name Seller_Briefing_Agent --version <that number>`. Republishing the bundle creates a new version each time, so the latest is what we want active. If the response says it's already active, that's fine - keep going.
+
+14. Wire up Lightning page-context binding by running the post-publish patcher: `./scripts/patch-page-context.sh`. This script is part of the repo we just cloned and is essential — without it, the agent CANNOT auto-detect the record on the user's screen when opened from a Lightning record page. The patcher retrieves the deployed BotVersion XML, flips `currentRecordId` and `currentObjectApiName` from `<visibility>Internal</visibility>` to `<visibility>External</visibility>` (with `includeInPrompt=true`), and redeploys. The Agent Script DSL doesn't expose this binding directly today, so this patch is required after every publish. The script handles deactivate/redeploy/reactivate automatically. If it reports it ran successfully, continue.
+
+15. Deploy the permission set on top:
     `sf project deploy start --metadata "PermissionSet:Seller_Briefing_Agent"`
 
-14. Find the latest BotVersion and activate it. First query: `sf data query --query "SELECT VersionNumber FROM BotVersion WHERE BotDefinition.DeveloperName = 'Seller_Briefing_Agent' ORDER BY VersionNumber DESC LIMIT 1"`. Take the version number from that result and run: `sf agent activate --api-name Seller_Briefing_Agent --version <that number>`. Republishing the bundle creates a new version each time, so the latest is what we want active. If the response says it's already active, that's fine - keep going.
+16. Assign the permission set to me: `sf org assign permset --name Seller_Briefing_Agent`. If already assigned, fine.
 
-15. Assign the permission set to me: `sf org assign permset --name Seller_Briefing_Agent`. If already assigned, fine.
-
-16. Smoke test: `sf data query --query "SELECT Id, DeveloperName, Type FROM BotDefinition WHERE DeveloperName = 'Seller_Briefing_Agent'"`. Confirm exactly one row returns AND the Type field is 'InternalCopilot' (this is the runtime value that corresponds to `agent_type: "AgentforceEmployeeAgent"` in the Agent Script). If Type comes back as 'ExternalCopilot' or any other value, surface it - that means the publish step somehow produced the wrong type and we need to investigate.
+17. Smoke test: `sf data query --query "SELECT Id, DeveloperName, Type FROM BotDefinition WHERE DeveloperName = 'Seller_Briefing_Agent'"`. Confirm exactly one row returns AND the Type field is 'InternalCopilot' (this is the runtime value that corresponds to `agent_type: "AgentforceEmployeeAgent"` in the Agent Script). If Type comes back as 'ExternalCopilot' or any other value, surface it - that means the publish step somehow produced the wrong type and we need to investigate.
 
 PHASE 4 - TELL ME HOW TO USE IT
 
-17. End with EXACTLY this message in your final response:
+18. End with EXACTLY this message in your final response:
 
 "All set. Your Seller Briefing Agent is installed and active.
 
-The simplest, always-works prompt is to ASK BY NAME. Try one of these in either the Agentforce panel on a record page, or in the Agent Builder's Live Test Mode:
+Try it on a real record page: open any Lead, Opportunity, or Account in Lightning, click the Agentforce panel (sparkle icon in the upper-right utility bar), and ask:
 
-- 'Brief me on the Acme Corp account'
-- 'Tell me about lead Jane Doe'
-- 'What do I need to know about the Smith renewal opportunity?'
+- 'Brief me on this account.'
+- 'Tell me about this opportunity.'
+- 'What do I need to know about this lead?'
 
-Substitute a real record name from your org. The agent looks up the record by name with QueryRecords, then pulls its details with GetRecordDetails, and produces a structured 30-second briefing.
+The agent reads the record on screen automatically and produces a structured 30-second briefing with snapshot, recent activity, key contacts, related context, and a suggested next step.
 
-A note: the Agent Script DSL doesn't currently expose a Lightning page-context binding for internal agents, so the agent can't auto-detect 'this record' on a record page yet. Asking by name is the reliable path. The agent handles the no-context case gracefully — it will tell you it needs a name instead of erroring out.
+You can also ask by name from anywhere (the Agentforce app home, the Agent Builder's Live Test Mode, etc.) — for example: 'Brief me on the Acme Corp account.'
+
+IMPORTANT: every additional user who needs to use the agent must be assigned the 'Seller Briefing Agent' permission set. You're already assigned. To add others, go to Setup -> Permission Sets -> Seller Briefing Agent -> Manage Assignments -> Add Assignments.
 
 If the panel doesn't appear on a record page, refresh the page and confirm Agentforce is enabled in your org (Setup -> Einstein Setup)."
 
@@ -122,7 +126,7 @@ GUARDRAILS
 | --- | --- | --- |
 | 1 — Bootstrap | Detect platform; auto-install Homebrew, Node, sf CLI, Git if missing | Vibes (you may type your Mac password once if Homebrew is installing for the first time) |
 | 2 — Org login | Open Salesforce login in your browser | You click through the login once |
-| 3 — Install | Detect/clean up prior broken install; validate Agent Script; publish authoring bundle (creates internal/employee agent); deploy permset; activate; assign; smoke-test the type | Vibes |
+| 3 — Install | Detect/clean up prior broken install; validate Agent Script; publish authoring bundle (creates internal/employee agent); activate; run the page-context patcher (so the agent auto-reads the record on screen); deploy permset; assign; smoke-test the type | Vibes |
 | 4 — Test | Tells you exactly how to test in your org | You |
 
 The agent is created from a **hand-authored Agent Script** (`.agent` file) that explicitly declares `agent_type: "AgentforceEmployeeAgent"`. That's the only reliable way to produce an internal employee agent today — both `sf agent create --spec` and `sf agent generate authoring-bundle --spec` have a known issue where they ignore the spec's `agentType: internal` and produce a Service Agent.

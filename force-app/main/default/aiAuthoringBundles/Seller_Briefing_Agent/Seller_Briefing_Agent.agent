@@ -13,17 +13,19 @@ config:
    role: "Deliver a fast, accurate background briefing on the Lead, Opportunity, or Account a seller is viewing. Surface related contacts, opportunities, recent tasks, and events so the seller can prep for an outreach, call, or meeting in under 30 seconds."
 
 variables:
-   # NOTE: Agent Script DSL doesn't currently support binding `linked` variables
-   # to Lightning page record context — only @MessagingSession, @MessagingEndUser,
-   # and @VoiceCall sources are valid (service-channel only). So these stay as
-   # plain mutable strings; the subagent instructions below cover the
-   # no-context-available case by asking the user for a record name and using
-   # QueryRecords to look it up.
+   # NOTE: The Agent Script DSL emits these as Internal/includeInPrompt=false in
+   # the deployed BotVersion, which prevents Lightning from injecting the
+   # on-screen record ID at runtime. The post-publish patcher
+   # (scripts/patch-page-context.sh, run automatically by setup.sh) flips
+   # both variables to External/includeInPrompt=true after every publish so
+   # the Lightning agent panel auto-populates them when opened from a Lead,
+   # Opportunity, or Account record page. The descriptions below are the
+   # LLM-facing hints that tell the model how to use the values.
    currentRecordId: mutable string = ""
-      description: "The Salesforce record ID of the Lead, Opportunity, or Account the user is currently viewing. Populated by Lightning when supported; otherwise empty."
+      description: "The ID of the record on the user's screen. It may not relate to the user's input. Only use this if the user input mentions 'this', 'current', 'the record', etc. If in doubt, don't use it."
 
    currentObjectApiName: mutable string = ""
-      description: "The API name of the object the user is currently viewing (Lead, Opportunity, or Account). Populated by Lightning when supported; otherwise empty."
+      description: "The API name of the Salesforce object (such as Account, Lead, or Opportunity) associated with the record the user is viewing. Do not use this if the user is already talking about a different object in the conversation."
 
 start_agent subagent_selector:
    description: "Routes users to the seller background briefing subagent."

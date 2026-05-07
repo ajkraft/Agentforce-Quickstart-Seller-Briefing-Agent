@@ -33,16 +33,18 @@ else
   ORG_LABEL="default org"
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 echo "==> Installing Seller Briefing Agent into $ORG_LABEL"
 echo
 
-echo "==> Step 1/4: Validating the Agent Script compiles"
+echo "==> Step 1/5: Validating the Agent Script compiles"
 sf agent validate authoring-bundle \
   --api-name Seller_Briefing_Agent \
   "${TARGET_ARGS[@]}"
 
 echo
-echo "==> Step 2/4: Publishing the authoring bundle to the org"
+echo "==> Step 2/5: Publishing the authoring bundle to the org"
 echo "    (Creates Bot, BotVersion, GenAiPlannerBundle, GenAiPlugin as an INTERNAL employee agent.)"
 sf agent publish authoring-bundle \
   --api-name Seller_Briefing_Agent \
@@ -50,13 +52,7 @@ sf agent publish authoring-bundle \
   "${TARGET_ARGS[@]}"
 
 echo
-echo "==> Step 3/4: Deploying the permission set"
-sf project deploy start \
-  --metadata "PermissionSet:Seller_Briefing_Agent" \
-  "${TARGET_ARGS[@]}"
-
-echo
-echo "==> Step 4/4: Activating the latest BotVersion and assigning the permission set"
+echo "==> Step 3/5: Activating the latest BotVersion"
 LATEST_VERSION=$(sf data query \
   --query "SELECT VersionNumber FROM BotVersion WHERE BotDefinition.DeveloperName = 'Seller_Briefing_Agent' ORDER BY VersionNumber DESC LIMIT 1" \
   --json \
@@ -75,6 +71,19 @@ sf agent activate \
   --version "$LATEST_VERSION" \
   "${TARGET_ARGS[@]}" || echo "(activation reported an error; continuing in case the agent is already active)"
 
+echo
+echo "==> Step 4/5: Wiring up Lightning page-context binding"
+echo "    (Flips currentRecordId and currentObjectApiName from Internal to External"
+echo "     so the agent auto-detects the record on screen. See"
+echo "     scripts/patch-page-context.sh for why this is necessary.)"
+"${SCRIPT_DIR}/scripts/patch-page-context.sh" "$ORG"
+
+echo
+echo "==> Step 5/5: Deploying & assigning the permission set"
+sf project deploy start \
+  --metadata "PermissionSet:Seller_Briefing_Agent" \
+  "${TARGET_ARGS[@]}"
+
 sf org assign permset \
   --name Seller_Briefing_Agent \
   "${TARGET_ARGS[@]}" || echo "(permset assign reported an error; continuing in case it was already assigned)"
@@ -85,3 +94,8 @@ echo
 echo "Test it: open any Lead, Opportunity, or Account record in Lightning, click the"
 echo "Agentforce panel (sparkle icon in the upper-right utility bar), and ask:"
 echo "    \"Brief me on this record.\""
+echo
+echo "IMPORTANT: every additional user who needs to use the agent must be assigned"
+echo "the Seller_Briefing_Agent permission set:"
+echo "    sf org assign permset --name Seller_Briefing_Agent --target-org ${ORG_LABEL} --on-behalf-of <username>"
+echo "or via Setup -> Permission Sets -> Seller Briefing Agent -> Manage Assignments."
