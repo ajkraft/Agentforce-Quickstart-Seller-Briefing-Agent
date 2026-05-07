@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPlugin xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <canEscalate>false</canEscalate>
+    <description>This topic is selected when a user requests a concise background briefing on the Lead, Opportunity, or Account they are currently viewing. It provides synthesized details and tangential CRM context for efficient preparation.</description>
+    <developerName>Seller_Background_Briefing</developerName>
+    <genAiFunctions>
+        <functionName>EmployeeCopilot__GetRecordDetails</functionName>
+    </genAiFunctions>
+    <genAiFunctions>
+        <functionName>EmployeeCopilot__GetActivitiesTimeline</functionName>
+    </genAiFunctions>
+    <genAiFunctions>
+        <functionName>SalesMgmt__GetRelatedEmails</functionName>
+    </genAiFunctions>
+    <genAiFunctions>
+        <functionName>SalesMgmt__GetRelatedNotes</functionName>
+    </genAiFunctions>
+    <genAiFunctions>
+        <functionName>runtime_sales_forecasting__GetForecastGuidance</functionName>
+    </genAiFunctions>
+    <genAiFunctions>
+        <functionName>EmployeeCopilot__AnswerQuestionsWithKnowledge</functionName>
+    </genAiFunctions>
+    <genAiPluginInstructions>
+        <description>If the query is about retrieving details of the current record, use EmployeeCopilot__GetRecordDetails.</description>
+        <developerName>instruction_0</developerName>
+        <language xsi:nil="true"/>
+        <masterLabel>instruction_0</masterLabel>
+        <sortOrder>0</sortOrder>
+    </genAiPluginInstructions>
+    <genAiPluginInstructions>
+        <description>If the query is about summarizing recent activities, use EmployeeCopilot__GetActivitiesTimeline.</description>
+        <developerName>instruction_1</developerName>
+        <language xsi:nil="true"/>
+        <masterLabel>instruction_1</masterLabel>
+        <sortOrder>0</sortOrder>
+    </genAiPluginInstructions>
+    <genAiPluginInstructions>
+        <description>To suggest next steps or guidance, use runtime_sales_forecasting__GetForecastGuidance.</description>
+        <developerName>instruction_4</developerName>
+        <language xsi:nil="true"/>
+        <masterLabel>instruction_4</masterLabel>
+        <sortOrder>0</sortOrder>
+    </genAiPluginInstructions>
+    <genAiPluginInstructions>
+        <description>If the user asks for related notes, use SalesMgmt__GetRelatedNotes.</description>
+        <developerName>instruction_3</developerName>
+        <language xsi:nil="true"/>
+        <masterLabel>instruction_3</masterLabel>
+        <sortOrder>0</sortOrder>
+    </genAiPluginInstructions>
+    <genAiPluginInstructions>
+        <description>If the user asks for related emails, use SalesMgmt__GetRelatedEmails.</description>
+        <developerName>instruction_2</developerName>
+        <language xsi:nil="true"/>
+        <masterLabel>instruction_2</masterLabel>
+        <sortOrder>0</sortOrder>
+    </genAiPluginInstructions>
+    <language>en_US</language>
+    <localDeveloperName>Seller_Background_Briefing</localDeveloperName>
+    <masterLabel>Seller Background Briefing</masterLabel>
+    <pluginType>Topic</pluginType>
+    <scope>Your job is to only provide a detailed briefing on the current Lead, Opportunity, or Account record visible on the user’s screen. This includes retrieving related contacts, opportunities, recent tasks, events, and suggesting next steps. You must not fabricate information or request record IDs from the user.</scope>
+</GenAiPlugin>

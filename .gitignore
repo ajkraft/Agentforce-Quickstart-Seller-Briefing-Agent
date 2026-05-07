@@ -1,0 +1,10 @@
+.sf/
+.sfdx/
+.localdevserver/
+node_modules/
+*.log
+.idea/
+.vscode/
+.DS_Store
+.eslintcache
+deploy-options.json
