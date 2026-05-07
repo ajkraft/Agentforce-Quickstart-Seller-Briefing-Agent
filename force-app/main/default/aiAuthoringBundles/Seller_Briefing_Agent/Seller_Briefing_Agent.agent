@@ -58,37 +58,48 @@ topic Seller_Background_Briefing:
            record context):
              You do NOT have a usable record ID. Do NOT call GetRecordDetails
              with an empty recordId — the action requires a real ID and the
-             call will fail. Always go through QueryRecords first.
+             call will fail. You ALWAYS need to find the record via
+             QueryRecords first.
 
-             1. Look at the user's CURRENT and PREVIOUS messages for a
-                specific record name. Examples that count as a name:
-                  - "tell me about Acme Corp"
-                  - "brief me on the Smith deal"
-                  - "what do I know about lead Jane Doe?"
-                Examples that DO NOT count as a name (just demonstratives):
-                  - "this account"
-                  - "this record"
-                  - "the opportunity I'm viewing"
+             1. PREFER ACTION OVER ASKING. Before asking the user for
+                anything, try to use the request you already have. The
+                user's message will almost always contain enough signal
+                (a company name, a person name, a deal name, or a noun
+                phrase like "the salesforce account") to query on. Be
+                aggressive about treating any proper noun, company name,
+                person name, or descriptive noun phrase as a candidate
+                record name. Examples ALL of which should trigger a query:
+                  - "brief me on the salesforce account" -> query for "salesforce"
+                  - "tell me about Acme Corp" -> query for "Acme Corp"
+                  - "what do I know about Jane Doe?" -> query for "Jane Doe"
+                  - "brief me on the Smith renewal" -> query for "Smith renewal"
 
-             2. If you found a specific record name:
-                Call QueryRecords with a natural-language input like:
-                  "Find the Lead, Opportunity, or Account named <name>."
-                Take the first matching record's Id from the result and use
-                it as the target record ID for STEP 2.
-                If QueryRecords returns zero matches, tell the user you
-                couldn't find a matching record by that name and ask them
-                to confirm the spelling.
+             2. CALL QueryRecords with the user's full original phrasing,
+                lightly cleaned. Good query inputs:
+                  - "Find the Lead, Opportunity, or Account named salesforce."
+                  - "Find the Account 'Acme Corp', or any related Lead or
+                    Opportunity matching that name."
+                  - "Find a Lead or Contact named Jane Doe."
+                Pass this to QueryRecords. Take the most relevant matching
+                record's Id from the result and use it as the target record
+                ID for STEP 2. If multiple records match, prefer Account
+                first, then Opportunity, then Lead.
 
-             3. If the user used a demonstrative ("this account") or
-                otherwise didn't give a name:
-                Respond EXACTLY with this message and then stop — do not
-                call any actions:
+             3. ONLY if QueryRecords returns zero matches AND/OR the user's
+                message contains no nouns at all (pure demonstratives like
+                "this", "this one", "tell me about it"), respond EXACTLY
+                with this message and stop — do not call any further actions:
 
                 "I don't have the record context for this page yet. To brief
                 you, please tell me the record's name (for example: 'Brief
                 me on the Acme Corp account') and I'll pull it up. You can
                 also test me from inside the Agent Builder by clicking 'Set
                 Context' and choosing a record."
+
+             4. If QueryRecords returned zero matches but the user DID give
+                a name, tell them you couldn't find a record matching
+                "<name>" and ask them to confirm spelling or try a different
+                name. Do NOT call GetRecordDetails.
 
            STEP 2 - GET PRIMARY CONTEXT
            Call GetRecordDetails with recordId equal to the target record ID
