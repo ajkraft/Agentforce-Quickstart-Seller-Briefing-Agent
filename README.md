@@ -1,6 +1,8 @@
 # Agentforce Quickstart: Seller Briefing Agent
 
-A drop-in starter Agentforce employee agent that delivers a 30-second sales briefing from any Lead, Opportunity, or Account record page. Pulls the primary record plus tangential context — related contacts, opportunities, recent tasks, events, emails, and notes — and synthesizes a structured brief built entirely on standard, out-of-the-box Agentforce actions. Zero Apex, zero Flow, zero prompt templates required.
+A drop-in starter **internal Agentforce employee agent** that delivers a 30-second sales briefing from any Lead, Opportunity, or Account record page. Pulls the primary record plus tangential context — related contacts, opportunities, recent tasks, events, emails, and notes — and synthesizes a structured brief built entirely on standard, out-of-the-box Agentforce actions. Zero Apex, zero Flow, zero prompt templates required.
+
+The agent is generated **fresh in your org** from a YAML spec via `sf agent create --spec`, so it adapts to whatever standard managed actions are available there and is configured as an internal/employee agent (the kind that runs in the Lightning utility bar) — not a service/messaging agent.
 
 Designed as a reusable foundation that sales teams can clone and differentiate to their voice, playbook, and process.
 
@@ -44,10 +46,24 @@ The script deploys the metadata, activates the agent, and assigns the permission
 If you'd rather see each step:
 
 ```bash
+sf agent create \
+  --spec specs/seller-briefing-agent.yaml \
+  --name "Seller Briefing Agent" \
+  --api-name Seller_Briefing_Agent \
+  --target-org MyOrgAlias
 sf project deploy start --target-org MyOrgAlias
 sf agent activate --api-name Seller_Briefing_Agent --version 1 --target-org MyOrgAlias
 sf org assign permset --name Seller_Briefing_Agent --target-org MyOrgAlias
 ```
+
+`sf agent create` LLM-generates a correctly-typed internal Agentforce agent (Bot + BotVersion + GenAiPlannerBundle + GenAiPlugin) inside your org and retrieves the generated source into `force-app/main/default/`. `sf project deploy start` then deploys the permission set on top.
+
+### Already installed a broken version?
+
+Earlier revisions of this quickstart shipped pre-built Bot metadata that was misconfigured as a service/messaging agent. If you installed before this commit and saw a "Configuration Issues Detected" or "Agent User required" error during activation, delete the old agent first:
+
+1. **Setup → Agentforce Agents → Seller Briefing Agent → Delete.**
+2. Re-run any install option above.
 
 ---
 
@@ -80,18 +96,13 @@ Agentforce-Quickstart-Seller-Briefing-Agent/
 ├── setup.sh                       One-line CLI install
 ├── sfdx-project.json
 ├── specs/
-│   └── seller-briefing-agent.yaml Agent spec (used by the fallback path)
+│   └── seller-briefing-agent.yaml The source of truth for the agent
 └── force-app/main/default/
-    ├── bots/Seller_Briefing_Agent/
-    │   ├── Seller_Briefing_Agent.bot-meta.xml
-    │   └── v1.botVersion-meta.xml
-    ├── genAiPlannerBundles/Seller_Briefing_Agent/
-    │   └── Seller_Briefing_Agent.genAiPlannerBundle
-    ├── genAiPlugins/
-    │   └── Seller_Background_Briefing.genAiPlugin-meta.xml
     └── permissionsets/
         └── Seller_Briefing_Agent.permissionset-meta.xml
 ```
+
+The `bots/`, `genAiPlannerBundles/`, and `genAiPlugins/` folders are intentionally **not** in this repo. They are generated fresh in your target org by `sf agent create --spec`, which guarantees they're configured as an internal/employee agent and bound to actions that actually exist there. After install, `sf agent create` retrieves the generated source into your local `force-app/main/default/` so you can edit and redeploy.
 
 ### How it runs at runtime
 
@@ -116,12 +127,13 @@ The agent is built on standard managed actions only — no custom Apex, no custo
 
 ## Customize it
 
-The agent's behavior is driven by two things you can edit and redeploy:
+After the first install, `sf agent create` will have retrieved the generated agent source into your local `force-app/main/default/` (Bot, BotVersion, GenAiPlannerBundle, GenAiPlugin). From there:
 
-- **Topic instructions** — what the agent does and when. Edit `force-app/main/default/genAiPlugins/Seller_Background_Briefing.genAiPlugin-meta.xml`. The `<scope>` and `<genAiPluginInstructions>` blocks are the levers.
-- **Agent role and tone** — voice and posture. Edit `force-app/main/default/bots/Seller_Briefing_Agent/v1.botVersion-meta.xml` (`<role>`, `<company>`, `<toneType>`).
+- **Topic instructions** — what the agent does and when. Edit `force-app/main/default/genAiPlugins/Seller_Background_Briefing/Seller_Background_Briefing.genAiPlugin-meta.xml`. The `<scope>` and `<genAiPluginInstructions>` blocks are the levers.
+- **Agent role, tone, company** — voice and posture. Edit `force-app/main/default/bots/Seller_Briefing_Agent/v1.botVersion-meta.xml` (`<role>`, `<company>`, `<toneType>`).
+- **Spec changes** — if you want to rebuild from scratch with different topics, edit `specs/seller-briefing-agent.yaml` and re-run `sf agent create --spec` (after deleting the existing agent).
 
-After editing, redeploy and reactivate:
+After editing the retrieved source, redeploy and reactivate:
 
 ```bash
 sf project deploy start

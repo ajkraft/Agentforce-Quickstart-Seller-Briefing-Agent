@@ -9,6 +9,8 @@ The only step where Vibes will pause for you is the **browser-based Salesforce l
 ```
 You are operating in Agentforce Vibes. Your job is to install the Seller Briefing Agent quickstart from the GitHub repository https://github.com/ajkraft/Agentforce-Quickstart-Seller-Briefing-Agent into my currently authorized default Salesforce org.
 
+This quickstart creates an INTERNAL (Employee) Agentforce agent — the kind that runs in the Lightning utility bar on Lead, Opportunity, and Account record pages. The agent is generated fresh inside the target org from the YAML spec at specs/seller-briefing-agent.yaml; we do NOT deploy a pre-built Bot/BotVersion from the repo.
+
 I am not a developer. I may have never used a terminal or an IDE before. Execute all steps autonomously. Do not stop to ask me whether to install missing prerequisites — install them. Communicate in plain English as you go, one short status line per step. The only places you should pause and wait for me are the browser-based Salesforce login in Phase 2 and a final macOS admin password prompt if Homebrew is being installed for the very first time.
 
 If a step fails with an error you can fix on your own, fix it and continue. Never ask me to run a shell command myself unless you have genuinely exhausted your options.
@@ -54,20 +56,27 @@ PHASE 3 - INSTALL THE AGENT (fully autonomous)
    `git clone https://github.com/ajkraft/Agentforce-Quickstart-Seller-Briefing-Agent.git`
    then `cd Agentforce-Quickstart-Seller-Briefing-Agent`.
 
-10. Deploy the source: `sf project deploy start`.
-    FALLBACK: if the deploy fails because one of the standard managed actions referenced by the GenAiPlugin (EmployeeCopilot__*, SalesMgmt__*, runtime_sales_forecasting__*) doesn't exist in this org, recover automatically by regenerating the agent from the spec YAML:
+10. PRE-CHECK: see if a previous broken install of this agent exists:
+    `sf data query --query "SELECT Id, DeveloperName FROM BotDefinition WHERE DeveloperName = 'Seller_Briefing_Agent'"`
+    If exactly one row returns, tell me: "I see a previous Seller Briefing Agent in this org. I need to delete it before re-installing because the previous version was misconfigured as a service agent. I'll handle the delete via the Tooling API." Then attempt to delete it:
+    `sf data delete record --sobject BotDefinition --record-id <Id from query>`
+    If the delete fails, surface the error and tell me to manually delete the agent under Setup -> Agentforce Agents -> Seller Briefing Agent -> Delete, then say "Tell me 'continue' once you've deleted it" and wait. Otherwise continue.
+
+11. Generate the agent from the spec — this is the primary install action:
     `sf agent create --spec specs/seller-briefing-agent.yaml --name "Seller Briefing Agent" --api-name Seller_Briefing_Agent`
-    This LLM-generates topics from the spec and may take 30-60 seconds. Then continue to step 11.
+    This LLM-generates the Bot, BotVersion, GenAiPlannerBundle, and GenAiPlugin natively in my target org as an INTERNAL/Employee Agentforce agent (not a service agent). It takes 30-60 seconds. The command also retrieves the generated source into ./force-app/main/default/ so I can customize it later.
 
-11. Activate the agent: `sf agent activate --api-name Seller_Briefing_Agent --version 1`. If the response says it's already active, that's fine - keep going.
+12. Deploy the permission set: `sf project deploy start`.
 
-12. Assign the permission set to me: `sf org assign permset --name Seller_Briefing_Agent`. If already assigned, fine.
+13. Activate the agent: `sf agent activate --api-name Seller_Briefing_Agent --version 1`. If the response says it's already active, that's fine - keep going.
 
-13. Smoke test: `sf data query --query "SELECT Id, DeveloperName FROM BotDefinition WHERE DeveloperName = 'Seller_Briefing_Agent'"`. Confirm exactly one row returns. If zero, the agent didn't get created - surface the issue.
+14. Assign the permission set to me: `sf org assign permset --name Seller_Briefing_Agent`. If already assigned, fine.
+
+15. Smoke test: `sf data query --query "SELECT Id, DeveloperName, IsActive FROM BotDefinition WHERE DeveloperName = 'Seller_Briefing_Agent'"`. Confirm exactly one row returns. If zero, the agent didn't get created - surface the issue. If IsActive is false, attempt activation again.
 
 PHASE 4 - TELL ME HOW TO USE IT
 
-14. End with EXACTLY this message in your final response:
+16. End with EXACTLY this message in your final response:
 
 "All set. Your Seller Briefing Agent is installed and active.
 
@@ -81,10 +90,11 @@ If the panel doesn't appear, refresh the page and confirm Agentforce is enabled 
 
 GUARDRAILS
 
-- Do NOT modify any Salesforce configuration outside this repo's force-app/ directory.
-- Do NOT install anything beyond the prerequisites listed in Phase 1 and the metadata in this repo.
+- Do NOT modify any Salesforce configuration outside this repo's force-app/ directory and the agent we're creating.
+- Do NOT install anything beyond the prerequisites listed in Phase 1 and the metadata generated in Phase 3.
 - Do NOT change my default org once set in step 8.
 - Do NOT ask me to run shell commands myself. Run them yourself.
+- Do NOT deploy a pre-built Bot or BotVersion from the repo — those files are intentionally not in this repo. The agent is created fresh in my org by `sf agent create --spec`.
 - Keep your status messages short and human-readable. I'm not a developer.
 ```
 
@@ -96,7 +106,7 @@ GUARDRAILS
 | --- | --- | --- |
 | 1 — Bootstrap | Detect platform; auto-install Homebrew, Node, sf CLI, Git if missing | Vibes (you may type your Mac password once if Homebrew is installing for the first time) |
 | 2 — Org login | Open Salesforce login in your browser | You click through the login once |
-| 3 — Install | Clone repo, deploy metadata, activate agent, assign permission set | Vibes |
+| 3 — Install | Detect/delete any prior broken install; LLM-generate agent from spec; deploy permset; activate; assign | Vibes |
 | 4 — Test | Tells you exactly how to test in your org | You |
 
-If anything goes wrong mid-install (e.g. a missing managed action), the fallback uses `sf agent create --spec` to regenerate the agent from a YAML spec — no other action required from you.
+The agent's Bot, BotVersion, GenAiPlannerBundle, and GenAiPlugin are **generated fresh in your org** by `sf agent create --spec` so they pick up the correct internal/employee agent type and adapt to whichever standard managed actions your org has available. The repo intentionally ships only the spec YAML and the permission set — no pre-built bot metadata.
