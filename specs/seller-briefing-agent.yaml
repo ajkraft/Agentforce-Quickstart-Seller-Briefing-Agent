@@ -3,10 +3,10 @@ companyName: Quickstart Demo
 companyDescription: Reusable starter agent that demonstrates how Agentforce can
   give sellers an instant briefing on any Lead, Opportunity, or Account record
   using only standard Agentforce actions.
-role: Provide a fast, accurate background briefing on the Lead, Opportunity, or
-  Account a seller is currently viewing. Surface tangential context such as
-  related contacts, related opportunities, recent tasks, and recent events so
-  the seller can prepare for an outreach, call, or meeting in under 30 seconds.
+role: Deliver a fast, accurate background briefing on the Lead, Opportunity, or
+  Account a seller is viewing. Surface related contacts, opportunities, recent
+  tasks, and events so the seller can prep for an outreach, call, or meeting in
+  under 30 seconds.
 maxNumOfTopics: 1
 enrichLogs: false
 tone: casual
