@@ -19,9 +19,8 @@ variables:
    # plain mutable strings; the subagent instructions below cover the
    # no-context-available case by asking the user for a record name and using
    # QueryRecords to look it up.
-   currentRecordId: mutable object
+   currentRecordId: mutable string = ""
       description: "The Salesforce record ID of the Lead, Opportunity, or Account the user is currently viewing. Populated by Lightning when supported; otherwise empty."
-      complex_data_type_name: "lightning__recordIdType"
 
    currentObjectApiName: mutable string = ""
       description: "The API name of the object the user is currently viewing (Lead, Opportunity, or Account). Populated by Lightning when supported; otherwise empty."
@@ -45,73 +44,30 @@ subagent Seller_Background_Briefing:
            briefing on a Lead, Opportunity, or Account so they can prepare for
            an outreach, call, or meeting.
 
-           STEP 1 - DETERMINE THE TARGET RECORD ID
+           STEP 1 - DETERMINE WHICH PATH TO USE
 
            Inspect the value of {!@variables.currentRecordId}:
 
-           CASE A - currentRecordId IS NON-EMPTY (the user is on a record page):
-             Use {!@variables.currentRecordId} as the target record ID.
+           CASE A - currentRecordId IS NON-EMPTY (the user is on a record page,
+           or "Set Context" was used in preview):
+             You have a real record ID. Follow STEP 2A.
              {!@variables.currentObjectApiName} tells you the object type
-             (Lead, Opportunity, or Account). Skip to STEP 2.
+             (Lead, Opportunity, or Account).
 
-           CASE B - currentRecordId IS EMPTY (Live Test Mode, Agentforce app
-           home, or the agent panel was opened in a way that didn't pass
-           record context):
-             You do NOT have a usable record ID. Do NOT call GetRecordDetails
-             with an empty recordId — the action requires a real ID and the
-             call will fail. You ALWAYS need to find the record via
-             QueryRecords first.
+           CASE B - currentRecordId IS EMPTY (Live Test Mode without Set
+           Context, Agentforce app home, or the agent panel was opened in
+           a way that didn't pass record context):
+             You do NOT have a record ID. Do NOT call GetRecordDetails — it
+             requires a real ID bound from {!@variables.currentRecordId} and
+             the call will fail with an empty value. Follow STEP 2B instead,
+             which uses QueryRecords as the sole data source.
 
-             1. PREFER ACTION OVER ASKING. Before asking the user for
-                anything, try to use the request you already have. The
-                user's message will almost always contain enough signal
-                (a company name, a person name, a deal name, or a noun
-                phrase like "the salesforce account") to query on. Be
-                aggressive about treating any proper noun, company name,
-                person name, or descriptive noun phrase as a candidate
-                record name. Examples ALL of which should trigger a query:
-                  - "brief me on the salesforce account" -> query for "salesforce"
-                  - "tell me about Acme Corp" -> query for "Acme Corp"
-                  - "what do I know about Jane Doe?" -> query for "Jane Doe"
-                  - "brief me on the Smith renewal" -> query for "Smith renewal"
-
-             2. CALL QueryRecords with the user's full original phrasing,
-                lightly cleaned. Good query inputs:
-                  - "Find the Lead, Opportunity, or Account named salesforce."
-                  - "Find the Account 'Acme Corp', or any related Lead or
-                    Opportunity matching that name."
-                  - "Find a Lead or Contact named Jane Doe."
-                Pass this to QueryRecords. Take the most relevant matching
-                record's Id from the result and use it as the target record
-                ID for STEP 2. If multiple records match, prefer Account
-                first, then Opportunity, then Lead.
-
-             3. ONLY if QueryRecords returns zero matches AND/OR the user's
-                message contains no nouns at all (pure demonstratives like
-                "this", "this one", "tell me about it"), respond EXACTLY
-                with this message and stop — do not call any further actions:
-
-                "I don't have the record context for this page yet. To brief
-                you, please tell me the record's name (for example: 'Brief
-                me on the Acme Corp account') and I'll pull it up. You can
-                also test me from inside the Agent Builder by clicking 'Set
-                Context' and choosing a record."
-
-             4. If QueryRecords returned zero matches but the user DID give
-                a name, tell them you couldn't find a record matching
-                "<name>" and ask them to confirm spelling or try a different
-                name. Do NOT call GetRecordDetails.
-
-           STEP 2 - GET PRIMARY CONTEXT
-           Call GetRecordDetails with recordId equal to the target record ID
-           you determined in STEP 1. The action returns a text snapshot
-           containing the record's fields, related list records, and
-           metadata. NEVER call this action with an empty recordId.
-
-           STEP 3 - PULL TANGENTIAL CONTEXT
-           Call QueryRecords using a natural-language query. Adapt the query
-           to the record type, referencing the record by its name from the
-           snapshot returned in STEP 2:
+           STEP 2A - PRIMARY + TANGENTIAL (CASE A path)
+           Call GetRecordDetails. The action returns a text snapshot with
+           the record's fields, related list records, and metadata. Then
+           call QueryRecords using a natural-language query, adapted to the
+           record type and referencing the record by its name from the
+           snapshot:
 
            - Account: "Find related Contacts, open Opportunities, and recent
              Tasks and Events for the Account named <name>."
@@ -122,7 +78,51 @@ subagent Seller_Background_Briefing:
              and any matching Account or Contact records that share the
              company name or email domain."
 
-           STEP 4 - SYNTHESIZE
+           Then proceed to STEP 3 (synthesize).
+
+           STEP 2B - QUERY-ONLY PATH (CASE B path, no record ID available)
+
+           1. PREFER ACTION OVER ASKING. The user's message will almost always
+              contain enough signal (a company name, person name, deal name,
+              or noun phrase like "the salesforce account") to query on. Be
+              aggressive about treating any proper noun, company name, person
+              name, or descriptive noun phrase as a candidate record name.
+              Examples ALL of which should trigger a query:
+                - "brief me on the salesforce account" -> query for "salesforce"
+                - "tell me about Acme Corp" -> query for "Acme Corp"
+                - "what do I know about Jane Doe?" -> query for "Jane Doe"
+                - "brief me on the Smith renewal" -> query for "Smith renewal"
+
+           2. CALL QueryRecords with a rich natural-language query that asks
+              for both the primary record AND tangential context in one shot,
+              since you will not be calling GetRecordDetails on this path.
+              Examples of good queries:
+                - "Find the Account named salesforce, plus its related
+                  Contacts, open Opportunities, and recent Tasks and Events."
+                - "Find the Account 'Acme Corp', and surface its Contacts,
+                  Opportunities, and recent activity."
+                - "Find the Lead or Contact named Jane Doe and any related
+                  Tasks, Events, or Account records."
+              If multiple records match, prefer Account first, then
+              Opportunity, then Lead. Then proceed to STEP 3 (synthesize)
+              using the QueryRecords result as your sole data source.
+
+           3. If the user's message contains no nouns at all (pure
+              demonstratives like "this", "this one", "tell me about it"),
+              do not call any actions. Respond EXACTLY with this message
+              and stop:
+
+              "I don't have the record context for this page yet. To brief
+              you, please tell me the record's name (for example: 'Brief
+              me on the Acme Corp account') and I'll pull it up. You can
+              also test me from inside the Agent Builder by clicking 'Set
+              Context' and choosing a record."
+
+           4. If QueryRecords returned zero matches but the user DID give a
+              name, tell them you couldn't find a record matching "<name>"
+              and ask them to confirm spelling or try a different name.
+
+           STEP 3 - SYNTHESIZE
            Produce a briefing in this format:
 
            **Background: <Record Name>**
@@ -154,7 +154,7 @@ subagent Seller_Background_Briefing:
 
       actions:
          GetRecordDetails: @actions.GetRecordDetails
-            with recordId = ...
+            with recordId = @variables.currentRecordId
 
          QueryRecords: @actions.QueryRecords
             with query = ...
