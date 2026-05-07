@@ -16,7 +16,7 @@ variables:
    # NOTE: Agent Script DSL doesn't currently support binding `linked` variables
    # to Lightning page record context — only @MessagingSession, @MessagingEndUser,
    # and @VoiceCall sources are valid (service-channel only). So these stay as
-   # plain mutable strings; the topic instructions below cover the
+   # plain mutable strings; the subagent instructions below cover the
    # no-context-available case by asking the user for a record name and using
    # QueryRecords to look it up.
    currentRecordId: mutable string = ""
@@ -25,17 +25,17 @@ variables:
    currentObjectApiName: mutable string = ""
       description: "The API name of the object the user is currently viewing (Lead, Opportunity, or Account). Populated by Lightning when supported; otherwise empty."
 
-start_agent topic_selector:
-   description: "Routes users to the seller background briefing topic."
+start_agent subagent_selector:
+   description: "Routes users to the seller background briefing subagent."
 
    reasoning:
       instructions: |
          Select the tool that best matches the user's message and conversation history. If unclear, route to Seller_Background_Briefing.
       actions:
-         go_to_seller_background_briefing: @utils.transition to @topic.Seller_Background_Briefing
+         go_to_seller_background_briefing: @utils.transition to @subagent.Seller_Background_Briefing
             description: "Handles requests for background, context, summary, briefing, or 'tell me about' a Lead, Opportunity, or Account."
 
-topic Seller_Background_Briefing:
+subagent Seller_Background_Briefing:
    description: "User wants a background briefing on the Lead, Opportunity, or Account they are viewing. Includes related contacts, related opportunities, open tasks, and recent events."
 
    reasoning:
@@ -162,7 +162,7 @@ topic Seller_Background_Briefing:
       GetRecordDetails:
          description: "Retrieves the primary record's key fields, related list records, and metadata as a text snapshot."
          inputs:
-            recordId: string
+            recordId: object
                description: "The ID of a Salesforce record to get the record details for."
                label: "Record ID"
                is_required: True
