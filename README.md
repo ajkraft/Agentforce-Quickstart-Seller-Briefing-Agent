@@ -68,13 +68,6 @@ sf org assign permset \
 
 `scripts/patch-page-context.sh` is **required** after every publish. The Agent Script DSL emits the agent's `currentRecordId` and `currentObjectApiName` variables with `<visibility>Internal</visibility>` in the deployed BotVersion XML, which prevents the Lightning runtime from injecting the on-screen record ID. The patcher retrieves the deployed BotVersion, flips both variables to `External` with `includeInPrompt=true` (matching the shape of Salesforce's reference employee agents), and redeploys. Without it, the agent will not auto-detect the record you're viewing. See the script's header comment for details.
 
-### Already installed a broken version?
-
-Earlier revisions of this quickstart (commits before `c000000`) shipped pre-built Bot metadata or used `sf agent create --spec`, both of which produced a Service Agent rather than an internal employee agent. If you installed before this fix and saw "Configuration Issues Detected," "Agent User required," or `Type: Service Agent` in Setup, delete the old agent first:
-
-1. **Setup → Agentforce Agents → Seller Briefing Agent → Delete.**
-2. Re-run any install option above.
-
 ---
 
 ## Prerequisites
