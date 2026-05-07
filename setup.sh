@@ -11,11 +11,16 @@
 #   - An authorized org (sf org login web -a MyOrgAlias)
 #   - Agentforce enabled in the target org
 #
-# This installer creates an INTERNAL (Employee) Agentforce agent named
-# "Seller Briefing Agent" using the spec at specs/seller-briefing-agent.yaml.
-# The Bot, BotVersion, GenAiPlannerBundle, and GenAiPlugin metadata are
-# generated fresh in the target org by `sf agent create`, which adapts to
-# whatever standard managed actions are available in that org.
+# This installer publishes a hand-authored Agent Script (Agent Script DSL)
+# that creates an INTERNAL Agentforce employee agent (the kind that runs in
+# the Lightning utility bar on Lead, Opportunity, and Account record pages).
+# The Agent Script lives at
+#   force-app/main/default/aiAuthoringBundles/Seller_Briefing_Agent/Seller_Briefing_Agent.agent
+# and explicitly sets `agent_type: "AgentforceEmployeeAgent"`. That value is
+# what makes the resulting Bot an employee agent rather than a service agent.
+# Neither `sf agent create --spec` nor `sf agent generate authoring-bundle
+# --spec` honors `agentType: internal` in YAML specs today, so we don't use
+# them.
 
 set -euo pipefail
 
@@ -31,33 +36,32 @@ fi
 echo "==> Installing Seller Briefing Agent into $ORG_LABEL"
 echo
 
-echo "==> Step 1/4: Generating the agent in the org from specs/seller-briefing-agent.yaml"
-echo "    (This LLM-generates an internal/employee Agentforce agent; takes 30-60 seconds.)"
-if ! sf agent create \
-    --spec specs/seller-briefing-agent.yaml \
-    --name "Seller Briefing Agent" \
-    --api-name Seller_Briefing_Agent \
-    "${TARGET_ARGS[@]}"; then
-  echo
-  echo "==> 'sf agent create' failed. If the agent already exists in this org from a prior install, delete it first:"
-  echo "      Setup -> Agentforce Agents -> Seller Briefing Agent -> Delete"
-  echo "    then re-run this script."
-  exit 1
-fi
+echo "==> Step 1/4: Validating the Agent Script compiles"
+sf agent validate authoring-bundle \
+  --api-name Seller_Briefing_Agent \
+  "${TARGET_ARGS[@]}"
 
 echo
-echo "==> Step 2/4: Deploying the permission set"
-sf project deploy start "${TARGET_ARGS[@]}"
+echo "==> Step 2/4: Publishing the authoring bundle to the org"
+echo "    (Creates Bot, BotVersion, GenAiPlannerBundle, GenAiPlugin as an INTERNAL employee agent.)"
+sf agent publish authoring-bundle \
+  --api-name Seller_Briefing_Agent \
+  --skip-retrieve \
+  "${TARGET_ARGS[@]}"
 
 echo
-echo "==> Step 3/4: Activating Seller_Briefing_Agent v1"
+echo "==> Step 3/4: Deploying the permission set"
+sf project deploy start \
+  --metadata "PermissionSet:Seller_Briefing_Agent" \
+  "${TARGET_ARGS[@]}"
+
+echo
+echo "==> Step 4/4: Activating Seller_Briefing_Agent v1 and assigning the permission set"
 sf agent activate \
   --api-name Seller_Briefing_Agent \
   --version 1 \
   "${TARGET_ARGS[@]}" || echo "(activation reported an error; continuing in case the agent is already active)"
 
-echo
-echo "==> Step 4/4: Assigning Seller_Briefing_Agent permission set to the running user"
 sf org assign permset \
   --name Seller_Briefing_Agent \
   "${TARGET_ARGS[@]}" || echo "(permset assign reported an error; continuing in case it was already assigned)"

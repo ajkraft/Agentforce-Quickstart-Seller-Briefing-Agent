@@ -9,7 +9,7 @@ The only step where Vibes will pause for you is the **browser-based Salesforce l
 ```
 You are operating in Agentforce Vibes. Your job is to install the Seller Briefing Agent quickstart from the GitHub repository https://github.com/ajkraft/Agentforce-Quickstart-Seller-Briefing-Agent into my currently authorized default Salesforce org.
 
-This quickstart creates an INTERNAL (Employee) Agentforce agent — the kind that runs in the Lightning utility bar on Lead, Opportunity, and Account record pages. The agent is generated fresh inside the target org from the YAML spec at specs/seller-briefing-agent.yaml; we do NOT deploy a pre-built Bot/BotVersion from the repo.
+This quickstart installs an INTERNAL (Employee) Agentforce agent — the kind that runs in the Lightning utility bar on Lead, Opportunity, and Account record pages. The agent is defined by a hand-authored Agent Script at force-app/main/default/aiAuthoringBundles/Seller_Briefing_Agent/Seller_Briefing_Agent.agent which explicitly sets `agent_type: "AgentforceEmployeeAgent"`. Do NOT use `sf agent create --spec` or `sf agent generate authoring-bundle --spec` — those commands ignore the internal-agent intent and produce a Service Agent. Use `sf agent publish authoring-bundle` only.
 
 I am not a developer. I may have never used a terminal or an IDE before. Execute all steps autonomously. Do not stop to ask me whether to install missing prerequisites — install them. Communicate in plain English as you go, one short status line per step. The only places you should pause and wait for me are the browser-based Salesforce login in Phase 2 and a final macOS admin password prompt if Homebrew is being installed for the very first time.
 
@@ -58,25 +58,29 @@ PHASE 3 - INSTALL THE AGENT (fully autonomous)
 
 10. PRE-CHECK: see if a previous broken install of this agent exists:
     `sf data query --query "SELECT Id, DeveloperName FROM BotDefinition WHERE DeveloperName = 'Seller_Briefing_Agent'"`
-    If exactly one row returns, tell me: "I see a previous Seller Briefing Agent in this org. I need to delete it before re-installing because the previous version was misconfigured as a service agent. I'll handle the delete via the Tooling API." Then attempt to delete it:
-    `sf data delete record --sobject BotDefinition --record-id <Id from query>`
+    If exactly one row returns, tell me: "I see a previous Seller Briefing Agent in this org. I need to delete it before re-installing because earlier revisions of this quickstart created it as a Service Agent. I'll handle the delete automatically." Then attempt to delete it via the Tooling API:
+    `sf data delete record --sobject BotDefinition --record-id <Id from query> --use-tooling-api`
     If the delete fails, surface the error and tell me to manually delete the agent under Setup -> Agentforce Agents -> Seller Briefing Agent -> Delete, then say "Tell me 'continue' once you've deleted it" and wait. Otherwise continue.
 
-11. Generate the agent from the spec — this is the primary install action:
-    `sf agent create --spec specs/seller-briefing-agent.yaml --name "Seller Briefing Agent" --api-name Seller_Briefing_Agent`
-    This LLM-generates the Bot, BotVersion, GenAiPlannerBundle, and GenAiPlugin natively in my target org as an INTERNAL/Employee Agentforce agent (not a service agent). It takes 30-60 seconds. The command also retrieves the generated source into ./force-app/main/default/ so I can customize it later.
+11. Validate the Agent Script compiles:
+    `sf agent validate authoring-bundle --api-name Seller_Briefing_Agent`
 
-12. Deploy the permission set: `sf project deploy start`.
+12. Publish the authoring bundle. THIS IS THE ONLY COMMAND THAT CREATES THE AGENT. Do not use `sf agent create` or `sf project deploy` for the bundle:
+    `sf agent publish authoring-bundle --api-name Seller_Briefing_Agent --skip-retrieve`
+    This compiles the .agent script, creates the Bot/BotVersion/GenAiPlannerBundle/GenAiPlugin in my org as an INTERNAL/Employee Agentforce agent (because the .agent script declares `agent_type: "AgentforceEmployeeAgent"`), and deploys the AiAuthoringBundle metadata. It takes 30-60 seconds.
 
-13. Activate the agent: `sf agent activate --api-name Seller_Briefing_Agent --version 1`. If the response says it's already active, that's fine - keep going.
+13. Deploy the permission set on top:
+    `sf project deploy start --metadata "PermissionSet:Seller_Briefing_Agent"`
 
-14. Assign the permission set to me: `sf org assign permset --name Seller_Briefing_Agent`. If already assigned, fine.
+14. Activate the agent: `sf agent activate --api-name Seller_Briefing_Agent --version 1`. If the response says it's already active, that's fine - keep going.
 
-15. Smoke test: `sf data query --query "SELECT Id, DeveloperName, IsActive FROM BotDefinition WHERE DeveloperName = 'Seller_Briefing_Agent'"`. Confirm exactly one row returns. If zero, the agent didn't get created - surface the issue. If IsActive is false, attempt activation again.
+15. Assign the permission set to me: `sf org assign permset --name Seller_Briefing_Agent`. If already assigned, fine.
+
+16. Smoke test: `sf data query --query "SELECT Id, DeveloperName, Type FROM BotDefinition WHERE DeveloperName = 'Seller_Briefing_Agent'"`. Confirm exactly one row returns AND the Type field is 'InternalCopilot' (this is the runtime value that corresponds to `agent_type: "AgentforceEmployeeAgent"` in the Agent Script). If Type comes back as 'ExternalCopilot' or any other value, surface it - that means the publish step somehow produced the wrong type and we need to investigate.
 
 PHASE 4 - TELL ME HOW TO USE IT
 
-16. End with EXACTLY this message in your final response:
+17. End with EXACTLY this message in your final response:
 
 "All set. Your Seller Briefing Agent is installed and active.
 
@@ -91,10 +95,10 @@ If the panel doesn't appear, refresh the page and confirm Agentforce is enabled 
 GUARDRAILS
 
 - Do NOT modify any Salesforce configuration outside this repo's force-app/ directory and the agent we're creating.
-- Do NOT install anything beyond the prerequisites listed in Phase 1 and the metadata generated in Phase 3.
+- Do NOT install anything beyond the prerequisites listed in Phase 1.
 - Do NOT change my default org once set in step 8.
 - Do NOT ask me to run shell commands myself. Run them yourself.
-- Do NOT deploy a pre-built Bot or BotVersion from the repo — those files are intentionally not in this repo. The agent is created fresh in my org by `sf agent create --spec`.
+- Do NOT use `sf agent create --spec` or `sf agent generate authoring-bundle --spec` - those commands have a known bug where they produce a Service Agent regardless of the spec's `agentType: internal` value.
 - Keep your status messages short and human-readable. I'm not a developer.
 ```
 
@@ -106,7 +110,7 @@ GUARDRAILS
 | --- | --- | --- |
 | 1 — Bootstrap | Detect platform; auto-install Homebrew, Node, sf CLI, Git if missing | Vibes (you may type your Mac password once if Homebrew is installing for the first time) |
 | 2 — Org login | Open Salesforce login in your browser | You click through the login once |
-| 3 — Install | Detect/delete any prior broken install; LLM-generate agent from spec; deploy permset; activate; assign | Vibes |
+| 3 — Install | Detect/clean up prior broken install; validate Agent Script; publish authoring bundle (creates internal/employee agent); deploy permset; activate; assign; smoke-test the type | Vibes |
 | 4 — Test | Tells you exactly how to test in your org | You |
 
-The agent's Bot, BotVersion, GenAiPlannerBundle, and GenAiPlugin are **generated fresh in your org** by `sf agent create --spec` so they pick up the correct internal/employee agent type and adapt to whichever standard managed actions your org has available. The repo intentionally ships only the spec YAML and the permission set — no pre-built bot metadata.
+The agent is created from a **hand-authored Agent Script** (`.agent` file) that explicitly declares `agent_type: "AgentforceEmployeeAgent"`. That's the only reliable way to produce an internal employee agent today — both `sf agent create --spec` and `sf agent generate authoring-bundle --spec` have a known issue where they ignore the spec's `agentType: internal` and produce a Service Agent.
