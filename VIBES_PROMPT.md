@@ -11,6 +11,8 @@ You are operating in Agentforce Vibes. Your job is to install the Seller Briefin
 
 This quickstart installs an INTERNAL (Employee) Agentforce agent — the kind that runs in the Lightning utility bar on Lead, Opportunity, and Account record pages. The agent is defined by a hand-authored Agent Script at force-app/main/default/aiAuthoringBundles/Seller_Briefing_Agent/Seller_Briefing_Agent.agent which explicitly sets `agent_type: "AgentforceEmployeeAgent"`. Do NOT use `sf agent create --spec` or `sf agent generate authoring-bundle --spec` — those commands ignore the internal-agent intent and produce a Service Agent. Use `sf agent publish authoring-bundle` only.
 
+IMPORTANT: Trust the actual repo contents on disk after you clone, NOT any prior knowledge you may have of the repo's structure. The repo was recently restructured: it used to ship pre-built Bot/BotVersion/GenAiPlannerBundle/GenAiPlugin XML files, but those have been removed. The repo now ships only an `aiAuthoringBundles/` directory and a `permissionsets/` directory under `force-app/main/default/`. If you find yourself thinking "this repo has a bots folder," you are wrong — re-read the disk.
+
 I am not a developer. I may have never used a terminal or an IDE before. Execute all steps autonomously. Do not stop to ask me whether to install missing prerequisites — install them. Communicate in plain English as you go, one short status line per step. The only places you should pause and wait for me are the browser-based Salesforce login in Phase 2 and a final macOS admin password prompt if Homebrew is being installed for the very first time.
 
 If a step fails with an error you can fix on your own, fix it and continue. Never ask me to run a shell command myself unless you have genuinely exhausted your options.
@@ -52,9 +54,15 @@ PHASE 2 - AUTHORIZE A SALESFORCE ORG (one user click required)
 
 PHASE 3 - INSTALL THE AGENT (fully autonomous)
 
-9. Clone the repo (if not already cloned in the current directory):
-   `git clone https://github.com/ajkraft/Agentforce-Quickstart-Seller-Briefing-Agent.git`
-   then `cd Agentforce-Quickstart-Seller-Briefing-Agent`.
+9. Get a FRESH clone of the repo. ALWAYS do a clean clone — do not reuse a clone from a prior install attempt, because the repo structure has changed (it used to ship pre-built Bot/GenAiPlannerBundle/GenAiPlugin metadata; it now ships an Agent Script bundle instead).
+   - If a directory `Agentforce-Quickstart-Seller-Briefing-Agent` already exists in the current working directory, delete it: `rm -rf Agentforce-Quickstart-Seller-Briefing-Agent`.
+   - Then clone fresh: `git clone https://github.com/ajkraft/Agentforce-Quickstart-Seller-Briefing-Agent.git`
+   - Then `cd Agentforce-Quickstart-Seller-Briefing-Agent`.
+
+9a. VERIFY the expected files are present before proceeding. Run `ls force-app/main/default/aiAuthoringBundles/Seller_Briefing_Agent/`. You MUST see exactly two files:
+    - `Seller_Briefing_Agent.agent`
+    - `Seller_Briefing_Agent.bundle-meta.xml`
+    Also run `ls force-app/main/default/` and confirm you see ONLY two directories: `aiAuthoringBundles` and `permissionsets`. If you see `bots`, `genAiPlannerBundles`, or `genAiPlugins` directories, you are looking at a stale cached clone — the current repo does NOT contain those. In that case, halt and surface the issue to me.
 
 10. PRE-CHECK: see if a previous broken install of this agent exists:
     `sf data query --query "SELECT Id, DeveloperName FROM BotDefinition WHERE DeveloperName = 'Seller_Briefing_Agent'"`
