@@ -84,12 +84,21 @@ Earlier revisions of this quickstart (commits before `c000000`) shipped pre-buil
 
 ## Test it
 
+### On a real record page (the primary use case)
+
 1. Open any **Lead**, **Opportunity**, or **Account** record in Lightning.
 2. Click the **Agentforce panel** (the sparkle icon in the upper-right utility bar).
 3. Ask: *"Brief me on this record."*
-4. The agent will call `EmployeeCopilot__GetRecordDetails` for the primary record, pull related context via `EmployeeCopilot__QueryRecords`, and respond with a structured brief: snapshot, recent activity, key people, related context, and a suggested next step.
+4. The agent reads the page's `currentRecordId` and `currentObjectApiName` (Lightning auto-populates these), calls `EmployeeCopilot__GetRecordDetails` for the primary record, pulls related context via `EmployeeCopilot__QueryRecords`, and responds with a structured brief: snapshot, recent activity, key people, related context, and a suggested next step.
 
-If the panel doesn't appear, confirm the **Seller Briefing Agent** permission set is assigned to your user (Setup → Permission Sets → Seller Briefing Agent → Manage Assignments) and that the agent is **Active** (Setup → Agentforce Agents → Seller Briefing Agent).
+### In the Agent Builder's Live Test Mode
+
+Live Test Mode runs without a record-page context, so `currentRecordId` is empty. The agent handles this two ways:
+
+- **Recommended:** Click the **Set Context** button at the top of the test panel and choose a real Lead, Opportunity, or Account record. The agent will then behave exactly as it does on a record page.
+- **Or:** Test by name. Ask *"Brief me on the Acme Corp account"* or *"Tell me about lead Jane Doe"*. The agent will call `QueryRecords` to find the record by name, then proceed with the briefing. Without context AND without a name, the agent will respond by asking which record to brief on (instead of failing silently).
+
+If the panel doesn't appear on a record page, confirm the **Seller Briefing Agent** permission set is assigned to your user (Setup → Permission Sets → Seller Briefing Agent → Manage Assignments) and that the agent is **Active** (Setup → Agentforce Agents → Seller Briefing Agent).
 
 ---
 

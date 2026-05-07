@@ -80,7 +80,7 @@ PHASE 3 - INSTALL THE AGENT (fully autonomous)
 13. Deploy the permission set on top:
     `sf project deploy start --metadata "PermissionSet:Seller_Briefing_Agent"`
 
-14. Activate the agent: `sf agent activate --api-name Seller_Briefing_Agent --version 1`. If the response says it's already active, that's fine - keep going.
+14. Find the latest BotVersion and activate it. First query: `sf data query --query "SELECT VersionNumber FROM BotVersion WHERE BotDefinition.DeveloperName = 'Seller_Briefing_Agent' ORDER BY VersionNumber DESC LIMIT 1"`. Take the version number from that result and run: `sf agent activate --api-name Seller_Briefing_Agent --version <that number>`. Republishing the bundle creates a new version each time, so the latest is what we want active. If the response says it's already active, that's fine - keep going.
 
 15. Assign the permission set to me: `sf org assign permset --name Seller_Briefing_Agent`. If already assigned, fine.
 
@@ -92,13 +92,17 @@ PHASE 4 - TELL ME HOW TO USE IT
 
 "All set. Your Seller Briefing Agent is installed and active.
 
-To test it:
+To test it (best experience):
 1. Open your Salesforce org in a browser.
 2. Navigate to any Lead, Opportunity, or Account record.
 3. Click the Agentforce panel - the sparkle icon in the upper-right utility bar.
 4. Ask: 'Brief me on this record.'
 
-If the panel doesn't appear, refresh the page and confirm Agentforce is enabled in your org (Setup -> Einstein Setup)."
+To test inside the Agent Builder (Live Test Mode):
+- Click 'Set Context' at the top of the test panel and choose a real record, OR
+- Just ask by name: 'Brief me on the Acme Corp account' or 'Tell me about lead Jane Doe'.
+
+If the panel doesn't appear on a record page, refresh the page and confirm Agentforce is enabled in your org (Setup -> Einstein Setup)."
 
 GUARDRAILS
 

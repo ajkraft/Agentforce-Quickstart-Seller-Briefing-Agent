@@ -56,10 +56,23 @@ sf project deploy start \
   "${TARGET_ARGS[@]}"
 
 echo
-echo "==> Step 4/4: Activating Seller_Briefing_Agent v1 and assigning the permission set"
+echo "==> Step 4/4: Activating the latest BotVersion and assigning the permission set"
+LATEST_VERSION=$(sf data query \
+  --query "SELECT VersionNumber FROM BotVersion WHERE BotDefinition.DeveloperName = 'Seller_Briefing_Agent' ORDER BY VersionNumber DESC LIMIT 1" \
+  --json \
+  "${TARGET_ARGS[@]}" 2>/dev/null \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['result']['records'][0]['VersionNumber'])" 2>/dev/null)
+
+if [[ -z "$LATEST_VERSION" ]]; then
+  LATEST_VERSION=1
+  echo "(could not determine latest BotVersion; defaulting to v1)"
+else
+  echo "Latest BotVersion: v${LATEST_VERSION}"
+fi
+
 sf agent activate \
   --api-name Seller_Briefing_Agent \
-  --version 1 \
+  --version "$LATEST_VERSION" \
   "${TARGET_ARGS[@]}" || echo "(activation reported an error; continuing in case the agent is already active)"
 
 sf org assign permset \
