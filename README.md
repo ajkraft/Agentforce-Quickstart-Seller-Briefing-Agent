@@ -79,7 +79,7 @@ Earlier revisions of this quickstart (commits before `c000000`) shipped pre-buil
 
 ## Prerequisites
 
-- A Salesforce org with **Agentforce enabled** (Einstein 1 Platform / Agentforce SKU).
+- A Salesforce org with **Agentforce enabled** (Agentforce 1 Platform / Agentforce SKU).
 - **Sales Cloud features active** for the full experience — the agent calls `EmployeeCopilot__GetRecordDetails` and `EmployeeCopilot__QueryRecords`. Standard Sales Cloud orgs have these by default.
 - For **Option 2/3**: Salesforce CLI installed (`brew install sf-cli` on macOS, or [download](https://developer.salesforce.com/tools/salesforcecli)) and an authorized org (`sf org login web -a MyOrgAlias`).
 
@@ -194,12 +194,6 @@ sf agent activate --api-name Seller_Briefing_Agent --version <latest>
 ```
 
 `sf agent publish` creates a new BotVersion each time, and that new BotVersion's `currentRecordId` / `currentObjectApiName` variables ship with `<visibility>Internal</visibility>` (the Agent Script DSL doesn't currently expose External). Without re-running the patcher, the agent will stop reading the record on screen on the new active version. Always run the patcher after publish.
-
----
-
-## Why this isn't a packaged install
-
-Salesforce's official packageable-component list does not include `Bot`, `BotVersion`, or `AiAuthoringBundle` in any 1GP unmanaged package, 2GP unlocked package, or 1GP managed package — so a traditional "install URL" is structurally impossible for an Agentforce agent today. The only paths Salesforce supports are direct metadata deploy (this repo) and AppExchange-distributed 2GP managed packages. For a quickstart, the SFDX-repo-plus-CLI pattern matches what Salesforce architects ship publicly (e.g. [Pat Dennis's Deal Review Agent](https://github.com/PatrickDennisSFDC/deal-review-agent)) and avoids the packaging walls entirely.
 
 ---
 
