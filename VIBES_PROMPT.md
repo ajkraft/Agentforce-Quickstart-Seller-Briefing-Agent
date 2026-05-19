@@ -7,7 +7,7 @@ Copy everything in the fenced block below and paste it into a new Agentforce Vib
 The only step where Vibes will pause for you is the **browser-based Salesforce login** — that's a one-time click-through to log into your org. Everything else is automatic.
 
 ```
-You are operating in Agentforce Vibes. Your job is to install the Seller Briefing Agent quickstart from the GitHub repository https://github.com/ajkraft/Agentforce-Quickstart-Seller-Briefing-Agent into my currently authorized default Salesforce org.
+Your job is to install the Seller Briefing Agent quickstart from the GitHub repository https://github.com/ajkraft/Agentforce-Quickstart-Seller-Briefing-Agent into my currently authorized default Salesforce org. This has been optmized for Agentforce Vibes but if you are another coding assistant agent, these instructions will all work for you as well. 
 
 This quickstart installs an INTERNAL (Employee) Agentforce agent — the kind that runs in the Lightning utility bar on Lead, Opportunity, and Account record pages. The agent is defined by a hand-authored Agent Script at force-app/main/default/aiAuthoringBundles/Seller_Briefing_Agent/Seller_Briefing_Agent.agent which explicitly sets `agent_type: "AgentforceEmployeeAgent"`. Do NOT use `sf agent create --spec` or `sf agent generate authoring-bundle --spec` — those commands ignore the internal-agent intent and produce a Service Agent. Use `sf agent publish authoring-bundle` only.
 
@@ -124,7 +124,7 @@ GUARDRAILS
 
 | Phase | What | Who acts |
 | --- | --- | --- |
-| 1 — Bootstrap | Detect platform; auto-install Homebrew, Node, sf CLI, Git if missing | Vibes (you may type your Mac password once if Homebrew is installing for the first time) |
+| 1 — Bootstrap | Detect platform; auto-install Homebrew, Node, sf CLI, Git if missing |  (you may type your Mac password once if Homebrew is installing for the first time) |
 | 2 — Org login | Open Salesforce login in your browser | You click through the login once |
 | 3 — Install | Detect/clean up prior broken install; validate Agent Script; publish authoring bundle (creates internal/employee agent); activate; run the page-context patcher (so the agent auto-reads the record on screen); deploy permset; assign; smoke-test the type | Vibes |
 | 4 — Test | Tells you exactly how to test in your org | You |
